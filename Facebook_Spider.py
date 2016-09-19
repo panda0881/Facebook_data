@@ -31,8 +31,42 @@ class FacebookSpider:
         test_token = '&access_token=' + self.access_token
         url = base + q + searchType + test_token
         response = self.s.get(url)
-        pages = json.loads(response.text)['data']
+        result = json.loads(response.text)
+        pages = result['data']
         for page in pages:
             page_list.append((page['name'], page['id']))
+        while 'next' in result['paging']:
+            url = result['paging']['next']
+            response = self.s.get(url)
+            result = json.loads(response.text)
+            pages = result['data']
+            for page in pages:
+                page_list.append((page['name'], page['id']))
+            print('total number of pages for now: ' + str(len(page_list)))
         return page_list
+
+    def get_status_from_page(self, page_id):
+        status_list = list()
+        base = "https://graph.facebook.com/v2.7"
+        node = "/%s/posts" % page_id
+        fields = "/?fields=message,link,created_time,type,name,id," + \
+                 "comments.limit(0).summary(true),shares,reactions" + \
+                 ".limit(0).summary(true)"
+
+        parameters = "&limit=%s&access_token=%s" % (100, self.access_token)
+        url = base + node + fields + parameters
+        response = self.s.get(url)
+        result = json.loads(response.text)
+        statuses = result['data']
+        for status in statuses:
+            status_list.append(status['id'])
+        while 'paging' in result:
+            url = result['paging']['next']
+            response = self.s.get(url)
+            result = json.loads(response.text)
+            statuses = result['data']
+            for status in statuses:
+                status_list.append(status['id'])
+            print('total number of pages for now: ' + str(len(status_list)))
+        return status_list
 
